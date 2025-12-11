@@ -1,0 +1,55 @@
+name: Build & Push to ECR
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+env:
+  AWS_REGION: eu-central-1
+  ECR_REGISTRY: 787587782604.dkr.ecr.eu-central-1.amazonaws.com
+  ECR_REPOSITORY: gm-diploma-project-ecr-repo-api
+  ROLE_TO_ASSUME: arn:aws:iam::787587782604:role/GitHubActions
+
+permissions:
+  id-token: write 
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Calculate Image Tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "TAG=pr-${{ github.event.number }}" >> $GITHUB_ENV
+          else
+            echo "TAG=sha-${{ github.sha }}" >> $GITHUB_ENV
+          fi
+
+      - name: Build Backend
+        run: |
+          cd backend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:backend-${{ env.TAG }} .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:backend-${{ env.TAG }}
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:frontend-${{ env.TAG }} .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:frontend-${{ env.TAG }}
