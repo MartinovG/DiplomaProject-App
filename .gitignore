@@ -1,0 +1,26 @@
+# --- General ---
+node_modules/
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Environment Variables (CRITICAL) ---
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- Backend Specific ---
+backend/dist/
+backend/coverage/
+
+# --- Frontend (Next.js) Specific ---
+.next/
+out/
+build/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
