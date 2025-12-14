@@ -67,7 +67,7 @@ export default function Dashboard() {
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg shadow-cyan-500/20">
                 <Layers className="w-6 h-6 text-white" />
               </div>
-              Preview<span className="text-slate-500">Control</span>
+              Test 2<span className="text-slate-500">Test 2</span>
             </h1>
             <p className="text-slate-500 text-sm mt-2 ml-1">Kubernetes Environment Lifecycle Manager</p>
           </div>
