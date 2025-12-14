@@ -10,6 +10,8 @@ env:
   ECR_REGISTRY: 787587782604.dkr.ecr.eu-central-1.amazonaws.com
   ECR_REPOSITORY: gm-diploma-project-ecr-repo-api
   ROLE_TO_ASSUME: arn:aws:iam::787587782604:role/GitHubActions
+  ARGOCD_REPO: github.com/MartinovG/DiplomaProject-ArgoCD.git
+  ARGOCD_FILE_PATH: eu-central-1/prod/helm/values.yaml
 
 permissions:
   id-token: write 
@@ -53,3 +55,29 @@ jobs:
           cd frontend
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:frontend-${{ env.TAG }} .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:frontend-${{ env.TAG }}
+
+      - name: Update ArgoCD Repo
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.ARGOCD_REPO_TOKEN }}
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+          git clone https://x-access-token:${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
+          cd argocd-repo
+
+          # Matches "tag: backend-..." and replaces it with the new tag
+          sed -i "s|tag: backend-.*|tag: backend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
+          sed -i "s|tag: frontend-.*|tag: frontend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
+
+          git diff
+
+          if [[ -n $(git status -s) ]]; then
+            git add ${{ env.ARGOCD_FILE_PATH }}
+            git commit -m "ci: update production images to ${{ env.TAG }}"
+            git push origin main
+            echo "🚀 ArgoCD repository updated successfully!"
+          else
+            echo "No changes detected (tags might be identical)."
+          fi
