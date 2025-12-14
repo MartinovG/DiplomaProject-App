@@ -13,10 +13,11 @@ app.use(express.json());
 app.get('/api/envs', async (req: Request, res: Response) => {
   try {
     const nsRes = await k8sCoreApi.listNamespace();
-    // Filter for namespaces starting with "pr-" (your previews) or "student-"
-    const envs = nsRes.body.items.filter(ns => 
-      ns.metadata?.name?.startsWith('pr-') || ns.metadata?.name?.startsWith('student')
-    );
+    const envs = nsRes.body.items;
+    // // Filter for namespaces starting with "pr-" (your previews) or "student-"
+    // const envs = nsRes.body.items.filter(ns => 
+    //   ns.metadata?.name?.startsWith('pr-') || ns.metadata?.name?.startsWith('student')
+    // );
 
     const data = await Promise.all(envs.map(async (ns) => {
       const name = ns.metadata?.name || '';

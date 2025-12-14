@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Play, Pause, Activity, Clock, Server, RefreshCw, Terminal, Layers, Box } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export default function Dashboard() {
   const [envs, setEnvs] = useState<any[]>([]);
