@@ -53,12 +53,12 @@ export default function Dashboard() {
     <main className="min-h-screen bg-[#0a0c10] text-slate-300 font-sans selection:bg-cyan-500/30">
       
       {/* Background Gradients */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-900/10 rounded-full blur-[120px]" />
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-slate-800/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-slate-800/20 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative max-w-7xl mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="relative z-10 max-w-7xl mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* HEADER */}
         <header className="lg:col-span-12 flex justify-between items-center mb-4 border-b border-white/5 pb-6">
@@ -67,7 +67,7 @@ export default function Dashboard() {
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg shadow-cyan-500/20">
                 <Layers className="w-6 h-6 text-white" />
               </div>
-              Preview<span className="text-slate-500">Control</span>
+              Tropcho<span className="text-slate-500">Toshi</span>
             </h1>
             <p className="text-slate-500 text-sm mt-2 ml-1">Kubernetes Environment Lifecycle Manager</p>
           </div>
