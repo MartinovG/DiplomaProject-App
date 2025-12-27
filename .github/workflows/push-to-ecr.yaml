@@ -8,7 +8,8 @@ on:
 env:
   AWS_REGION: eu-central-1
   ECR_REGISTRY: 787587782604.dkr.ecr.eu-central-1.amazonaws.com
-  ECR_REPOSITORY: gm-diploma-project-ecr-repo-api
+  ECR_REPOSITORY_BACKEND: gm-diploma-project-ecr-api
+  ECR_REPOSITORY_FRONTEND: gm-diploma-project-ecr-frontend
   ROLE_TO_ASSUME: arn:aws:iam::787587782604:role/GitHubActions
   ARGOCD_REPO: github.com/MartinovG/DiplomaProject-ArgoCD.git
   ARGOCD_FILE_PATH: eu-central-1/prod/helm/values.yaml
@@ -47,14 +48,14 @@ jobs:
       - name: Build Backend
         run: |
           cd backend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:backend-${{ env.TAG }} .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:backend-${{ env.TAG }}
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:backend-${{ env.TAG }} .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:backend-${{ env.TAG }}
 
       - name: Build Frontend
         run: |
           cd frontend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:frontend-${{ env.TAG }} .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:frontend-${{ env.TAG }}
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:frontend-${{ env.TAG }} .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:frontend-${{ env.TAG }}
 
       - name: Update ArgoCD Repo
         if: github.ref == 'refs/heads/main'
@@ -67,7 +68,6 @@ jobs:
           git clone https://x-access-token:${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
           cd argocd-repo
 
-          # Matches "tag: backend-..." and replaces it with the new tag
           sed -i "s|tag: backend-.*|tag: backend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
           sed -i "s|tag: frontend-.*|tag: frontend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
 
@@ -77,7 +77,7 @@ jobs:
             git add ${{ env.ARGOCD_FILE_PATH }}
             git commit -m "ci: update production images to ${{ env.TAG }}"
             git push origin main
-            echo "🚀 ArgoCD repository updated successfully!"
+            echo "ArgoCD repository updated successfully!"
           else
             echo "No changes detected (tags might be identical)."
           fi
