@@ -1,0 +1,35 @@
+name: PR Message
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  welcome-msg:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Preview Info
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prNumber = context.issue.number;
+            const previewUrl = `https://pr-${prNumber}.elsys.itgix.eu`;
+            const namespace = `pr-${prNumber}`;
+            
+            const body = `
+            ### Preview Environment
+            
+            - **URL:** ${previewUrl}
+            - **Namespace:** \`${namespace}\`
+            - **Images:** \`backend-pr-${prNumber}\` / \`frontend-pr-${prNumber}\`
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
