@@ -1,20 +1,15 @@
-FROM node:20-alpine AS base
-
-FROM base AS deps
+# Stage 1: Build (Runs in Pipeline)
+FROM node:24-alpine AS builder
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json* ./
+COPY package*.json ./
 RUN npm ci
-
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
 ENV NEXT_TELEMETRY_DISABLED 1
-
 RUN npm run build
 
-FROM base AS runner
+# Stage 2: Final Image (Created in Pipeline, Run in K8s)
+FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
@@ -32,4 +27,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
+# This command ONLY runs inside Kubernetes, NOT in your pipeline
 CMD ["node", "server.js"]
