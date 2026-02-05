@@ -50,13 +50,12 @@ export default function Dashboard() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0a0c10] text-slate-300 font-sans selection:bg-cyan-500/30">
+    <main className="min-h-screen bg-white text-black font-mono selection:bg-lime-300">
       
-      {/* Background Gradients */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-15%] left-[-5%] w-[50%] h-[50%] bg-orange-600/10 rounded-full blur-[140px]" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-amber-500/10 rounded-full blur-[140px]" />
-        <div className="absolute top-[30%] left-[40%] w-[30%] h-[30%] bg-red-900/5 rounded-full blur-[100px]" />
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-lime-400/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-400/20 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative max-w-7xl mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -68,9 +67,9 @@ export default function Dashboard() {
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg shadow-cyan-500/20">
                 <Layers className="w-6 h-6 text-white" />
               </div>
-              Preview<span className="text-slate-500">Control</span>
+              Testing<span className="text-slate-500">Environment</span>
             </h1>
-            <p className="text-slate-500 text-sm mt-2 ml-1">Kubernetes Environment Lifecycle Manager</p>
+            <p className="text-slate-500 text-sm mt-2 ml-1">Testing Environment</p>
           </div>
           <button 
             onClick={refreshData} 
