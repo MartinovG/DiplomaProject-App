@@ -54,10 +54,9 @@ export default function Dashboard() {
       
       {/* Background Gradients */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-900/10 rounded-full blur-[120px]" />
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-900/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-900/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[-15%] left-[-5%] w-[50%] h-[50%] bg-orange-600/10 rounded-full blur-[140px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-amber-500/10 rounded-full blur-[140px]" />
+        <div className="absolute top-[30%] left-[40%] w-[30%] h-[30%] bg-red-900/5 rounded-full blur-[100px]" />
       </div>
 
       <div className="relative max-w-7xl mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
