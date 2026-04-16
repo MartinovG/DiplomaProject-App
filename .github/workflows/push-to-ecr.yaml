@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          persist-credentials: false
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -65,7 +67,7 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
 
-          git clone https://${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
+          git clone https://${GITHUB_ACTOR}:${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
           cd argocd-repo
 
           sed -i "s|tag: backend-.*|tag: backend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
