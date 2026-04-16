@@ -76,7 +76,7 @@ jobs:
           if [[ -n $(git status -s) ]]; then
             git add ${{ env.ARGOCD_FILE_PATH }}
             git commit -m "ci: update production images to ${{ env.TAG }}"
-            git push origin main
+            git push https://x-access-token:${GH_TOKEN}@${ARGOCD_REPO} main
             echo "ArgoCD repository updated successfully!"
           else
             echo "No changes detected (tags might be identical)."
