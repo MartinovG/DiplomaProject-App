@@ -65,7 +65,7 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
 
-          git clone https://x-access-token:${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
+          git clone https://${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
           cd argocd-repo
 
           sed -i "s|tag: backend-.*|tag: backend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
