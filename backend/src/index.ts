@@ -9,6 +9,14 @@ const prisma = new PrismaClient();
 app.use(cors()); // Allow Frontend (port 3000) to talk to us (port 4000)
 app.use(express.json());
 
+app.get('/api/health', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.get('/api', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 // 1. GET: List all Preview Environments
 app.get('/api/envs', async (req: Request, res: Response) => {
   try {
