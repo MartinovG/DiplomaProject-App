@@ -65,7 +65,7 @@ jobs:
           git config --global user.email "github-actions@github.com"
           git config --global user.name "GitHub Actions"
 
-          git clone https://x-access-token:${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
+          git clone https://${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
           cd argocd-repo
 
           sed -i "s|tag: backend-.*|tag: backend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
@@ -76,7 +76,7 @@ jobs:
           if [[ -n $(git status -s) ]]; then
             git add ${{ env.ARGOCD_FILE_PATH }}
             git commit -m "ci: update production images to ${{ env.TAG }}"
-            git push https://x-access-token:${GH_TOKEN}@${ARGOCD_REPO} main
+            git push origin main
             echo "ArgoCD repository updated successfully!"
           else
             echo "No changes detected (tags might be identical)."
