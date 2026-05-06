@@ -34,6 +34,12 @@ function isVisibleNamespace(name: string): boolean {
   return true;
 }
 
+// Only pr-* preview namespaces can be scaled or auto-slept from the dashboard.
+// Production and other long-lived namespaces are protected.
+function isScalable(name: string): boolean {
+  return name.startsWith('pr-');
+}
+
 app.get('/api/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
@@ -87,6 +93,7 @@ app.get('/api/envs', async (_req: Request, res: Response) => {
           sleepInMs,
           costUsd: c?.costUsd ?? 0,
           savingsUsd: c?.savingsUsd ?? 0,
+          protected: !isScalable(name),
         };
       })
     );
@@ -104,6 +111,13 @@ app.post('/api/scale', async (req: Request, res: Response) => {
 
   if (!namespace || !deployment || !['wake', 'sleep'].includes(action)) {
     res.status(400).json({ error: 'namespace, deployment, and action (wake|sleep) are required' });
+    return;
+  }
+
+  if (!isScalable(namespace)) {
+    res.status(403).json({
+      error: `namespace "${namespace}" is protected; only pr-* preview envs can be scaled from the dashboard`,
+    });
     return;
   }
 

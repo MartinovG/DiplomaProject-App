@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
   Play, Pause, Clock, Server, RefreshCw, Terminal, Layers, Box,
-  AlertCircle, X, DollarSign, PiggyBank, Moon, Settings as SettingsIcon
+  AlertCircle, X, DollarSign, PiggyBank, Moon, Settings as SettingsIcon, Lock
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -21,6 +21,7 @@ interface Env {
   sleepInMs: number | null;
   costUsd: number;
   savingsUsd: number;
+  protected: boolean;
 }
 
 interface Log {
@@ -282,31 +283,42 @@ export default function Dashboard() {
                         {env.status}
                       </div>
 
-                      <button
-                        onClick={() => setSettingsFor(settingsFor === env.name ? null : env.name)}
-                        className="p-2.5 rounded-lg border border-white/5 bg-slate-800/50 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition-all active:scale-95"
-                        title="Settings"
-                      >
-                        <SettingsIcon className="w-4 h-4" />
-                      </button>
+                      {!env.protected && (
+                        <button
+                          onClick={() => setSettingsFor(settingsFor === env.name ? null : env.name)}
+                          className="p-2.5 rounded-lg border border-white/5 bg-slate-800/50 text-slate-400 hover:text-cyan-400 hover:border-cyan-500/30 transition-all active:scale-95"
+                          title="Settings"
+                        >
+                          <SettingsIcon className="w-4 h-4" />
+                        </button>
+                      )}
 
-                      <button
-                        onClick={() => toggleEnv(env)}
-                        disabled={isLoading || !env.deployment}
-                        className={`p-3 rounded-lg transition-all active:scale-95 border ${
-                          isLoading || !env.deployment
-                            ? 'opacity-50 cursor-not-allowed bg-slate-800/50 border-white/5 text-slate-600'
-                            : env.status === 'ACTIVE'
-                            ? 'bg-slate-800/50 border-white/5 text-slate-400 hover:text-amber-400 hover:border-amber-500/30 hover:bg-amber-500/10'
-                            : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                        }`}
-                      >
-                        {env.status === 'ACTIVE' ? (
-                          <Pause className="w-5 h-5 fill-current" />
-                        ) : (
-                          <Play className="w-5 h-5 fill-current" />
-                        )}
-                      </button>
+                      {env.protected ? (
+                        <div
+                          className="p-3 rounded-lg border border-blue-500/20 bg-blue-500/5 text-blue-400/70"
+                          title="Protected — production environments cannot be slept from the dashboard"
+                        >
+                          <Lock className="w-5 h-5" />
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => toggleEnv(env)}
+                          disabled={isLoading || !env.deployment}
+                          className={`p-3 rounded-lg transition-all active:scale-95 border ${
+                            isLoading || !env.deployment
+                              ? 'opacity-50 cursor-not-allowed bg-slate-800/50 border-white/5 text-slate-600'
+                              : env.status === 'ACTIVE'
+                              ? 'bg-slate-800/50 border-white/5 text-slate-400 hover:text-amber-400 hover:border-amber-500/30 hover:bg-amber-500/10'
+                              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]'
+                          }`}
+                        >
+                          {env.status === 'ACTIVE' ? (
+                            <Pause className="w-5 h-5 fill-current" />
+                          ) : (
+                            <Play className="w-5 h-5 fill-current" />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
 
