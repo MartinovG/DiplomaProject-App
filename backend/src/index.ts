@@ -1,46 +1,95 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
-import { k8sAppsApi, k8sCoreApi } from './k8s';
+import { k8sAppsApi, k8sCoreApi, scaleDeployment } from './k8s';
+import { computeClusterCost } from './cost';
+import { startAutoSleepController, touchActivity } from './autoSleep';
 
 const app = express();
 const prisma = new PrismaClient();
 
-app.use(cors()); // Allow Frontend (port 3000) to talk to us (port 4000)
+app.use(cors());
 app.use(express.json());
 
-app.get('/api/health', (req: Request, res: Response) => {
+const SYSTEM_NAMESPACES = new Set([
+  'kube-system',
+  'kube-public',
+  'kube-node-lease',
+  'argocd',
+  'ack-system',
+  'external-secrets',
+  'monitoring',
+  'loki',
+  'tempo',
+  'alloy',
+  'karpenter',
+  'default',
+]);
+
+function isVisibleNamespace(name: string): boolean {
+  if (!name) return false;
+  if (SYSTEM_NAMESPACES.has(name)) return false;
+  if (name.startsWith('kube-')) return false;
+  return true;
+}
+
+app.get('/api/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
 
-app.get('/api', (req: Request, res: Response) => {
+app.get('/api', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// 1. GET: List all Preview Environments
-app.get('/api/envs', async (req: Request, res: Response) => {
+// List preview environments with status, settings, and cost.
+app.get('/api/envs', async (_req: Request, res: Response) => {
   try {
     const nsRes = await k8sCoreApi.listNamespace();
-    const envs = nsRes.body.items;
-    // // Filter for namespaces starting with "pr-" (your previews) or "student-"
-    // const envs = nsRes.body.items.filter(ns => 
-    //   ns.metadata?.name?.startsWith('pr-') || ns.metadata?.name?.startsWith('student')
-    // );
+    const namespaces = (nsRes.items || []).filter((ns) =>
+      isVisibleNamespace(ns.metadata?.name || '')
+    );
 
-    const data = await Promise.all(envs.map(async (ns) => {
-      const name = ns.metadata?.name || '';
-      // Check deployment status to see if it's sleeping
-      const deployRes = await k8sAppsApi.listNamespacedDeployment(name);
-      const deployment = deployRes.body.items[0]; 
-      const replicas = deployment?.spec?.replicas ?? 0;
+    const cost = await computeClusterCost(prisma);
+    const costByNs = new Map(cost.perNamespace.map((c) => [c.namespace, c]));
 
-      return {
-        name,
-        deployment: deployment?.metadata?.name,
-        status: replicas > 0 ? 'ACTIVE' : 'SLEEPING',
-        created: ns.metadata?.creationTimestamp
-      };
-    }));
+    const data = await Promise.all(
+      namespaces.map(async (ns) => {
+        const name = ns.metadata?.name || '';
+        const deployRes = await k8sAppsApi.listNamespacedDeployment({ namespace: name });
+        const deployments = deployRes.items;
+        const primary = deployments.find((d) => d.metadata?.name !== 'postgres') ?? deployments[0];
+        const replicas = primary?.spec?.replicas ?? 0;
+
+        const env = await prisma.environment.upsert({
+          where: { namespace: name },
+          update: {},
+          create: { namespace: name },
+        });
+
+        const idleMs = Date.now() - env.lastActivityAt.getTime();
+        const idleTimeoutMs = env.idleTimeoutMin * 60_000;
+        const sleepInMs = env.autoSleepEnabled && replicas > 0
+          ? Math.max(idleTimeoutMs - idleMs, 0)
+          : null;
+
+        const c = costByNs.get(name);
+
+        return {
+          name,
+          deployment: primary?.metadata?.name,
+          status: replicas > 0 ? 'ACTIVE' : 'SLEEPING',
+          created: ns.metadata?.creationTimestamp,
+          lastActivityAt: env.lastActivityAt,
+          idleTimeoutMin: env.idleTimeoutMin,
+          autoSleepEnabled: env.autoSleepEnabled,
+          hourlyCostUsd: env.hourlyCostUsd,
+          sleepInMs,
+          costUsd: c?.costUsd ?? 0,
+          savingsUsd: c?.savingsUsd ?? 0,
+        };
+      })
+    );
 
     res.json(data);
   } catch (error) {
@@ -49,30 +98,25 @@ app.get('/api/envs', async (req: Request, res: Response) => {
   }
 });
 
-// 2. POST: Sleep or Wake an Environment
+// Sleep or wake an environment.
 app.post('/api/scale', async (req: Request, res: Response) => {
-  const { namespace, deployment, action } = req.body;
+  const { namespace, deployment, action } = req.body ?? {};
+
+  if (!namespace || !deployment || !['wake', 'sleep'].includes(action)) {
+    res.status(400).json({ error: 'namespace, deployment, and action (wake|sleep) are required' });
+    return;
+  }
+
   const replicas = action === 'wake' ? 1 : 0;
 
   try {
-    // A. Scale Kubernetes
-    // A. Scale Kubernetes
-    await k8sAppsApi.patchNamespacedDeploymentScale(
-      deployment,
-      namespace,
-      { spec: { replicas } },
-      undefined, // pretty
-      undefined, // dryRun
-      undefined, // fieldManager
-      undefined, // fieldValidation (This is likely the missing one in v0.21+)
-      undefined, // force
-      { headers: { 'Content-Type': 'application/merge-patch+json' } }
-    );
+    await scaleDeployment(deployment, namespace, replicas);
 
-    // B. Save to Database
     await prisma.auditLog.create({
-      data: { namespace, action: action.toUpperCase() }
+      data: { namespace, action: action.toUpperCase(), reason: 'manual' },
     });
+
+    if (action === 'wake') await touchActivity(prisma, namespace);
 
     res.json({ success: true });
   } catch (error) {
@@ -81,11 +125,103 @@ app.post('/api/scale', async (req: Request, res: Response) => {
   }
 });
 
-// 3. GET: Fetch Audit History
-app.get('/api/history', async (req, res) => {
-  const logs = await prisma.auditLog.findMany({ orderBy: { timestamp: 'desc' } });
-  res.json(logs);
+// Audit history.
+app.get('/api/history', async (_req: Request, res: Response) => {
+  try {
+    const logs = await prisma.auditLog.findMany({
+      orderBy: { timestamp: 'desc' },
+      take: 200,
+    });
+    res.json(logs);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch audit history' });
+  }
+});
+
+// Cluster-wide cost summary.
+app.get('/api/cost', async (_req: Request, res: Response) => {
+  try {
+    const cost = await computeClusterCost(prisma);
+    res.json(cost);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to compute cost' });
+  }
+});
+
+// Update per-environment settings (idle timeout, auto-sleep enable, hourly rate).
+app.post('/api/settings/:namespace', async (req: Request, res: Response) => {
+  const { namespace } = req.params;
+  const { idleTimeoutMin, autoSleepEnabled, hourlyCostUsd } = req.body ?? {};
+
+  const data: { idleTimeoutMin?: number; autoSleepEnabled?: boolean; hourlyCostUsd?: number } = {};
+  if (typeof idleTimeoutMin === 'number' && idleTimeoutMin > 0) data.idleTimeoutMin = idleTimeoutMin;
+  if (typeof autoSleepEnabled === 'boolean') data.autoSleepEnabled = autoSleepEnabled;
+  if (typeof hourlyCostUsd === 'number' && hourlyCostUsd >= 0) data.hourlyCostUsd = hourlyCostUsd;
+
+  if (Object.keys(data).length === 0) {
+    res.status(400).json({ error: 'no valid fields to update' });
+    return;
+  }
+
+  try {
+    const env = await prisma.environment.upsert({
+      where: { namespace },
+      update: data,
+      create: { namespace, ...data },
+    });
+    res.json(env);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update settings' });
+  }
+});
+
+// GitHub webhook: wake an environment when a PR receives a push or comment.
+app.post('/api/webhook/github', async (req: Request, res: Response) => {
+  const event = req.headers['x-github-event'];
+  const payload = req.body ?? {};
+  const prNumber = payload.pull_request?.number ?? payload.issue?.number;
+
+  if (!prNumber) {
+    res.status(400).json({ error: 'no PR number in payload' });
+    return;
+  }
+
+  const namespace = `pr-${prNumber}`;
+
+  try {
+    const deployRes = await k8sAppsApi.listNamespacedDeployment({ namespace });
+    const deployments = deployRes.items.filter((d) => d.metadata?.name !== 'postgres');
+    let woke = 0;
+
+    for (const d of deployments) {
+      const name = d.metadata?.name;
+      if (!name) continue;
+      const replicas = d.spec?.replicas ?? 0;
+      if (replicas === 0) {
+        await scaleDeployment(name, namespace, 1);
+        woke += 1;
+      }
+    }
+
+    if (woke > 0) {
+      await prisma.auditLog.create({
+        data: { namespace, action: 'AUTO_WAKE', reason: `github:${event ?? 'unknown'}` },
+      });
+    }
+
+    await touchActivity(prisma, namespace);
+    res.json({ success: true, woke });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to process webhook' });
+  }
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Backend running on port ${PORT}`);
+  startAutoSleepController(prisma);
+});

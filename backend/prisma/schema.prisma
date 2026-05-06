@@ -10,6 +10,17 @@ datasource db {
 model AuditLog {
   id        Int      @id @default(autoincrement())
   namespace String
-  action    String   // "SLEEP" or "WAKE"
+  action    String   // SLEEP, WAKE, AUTO_SLEEP, AUTO_WAKE
+  reason    String?
   timestamp DateTime @default(now())
+
+  @@index([namespace, timestamp])
+}
+
+model Environment {
+  namespace        String   @id
+  lastActivityAt   DateTime @default(now())
+  idleTimeoutMin   Int      @default(30)
+  autoSleepEnabled Boolean  @default(true)
+  hourlyCostUsd    Float    @default(0.04)
 }

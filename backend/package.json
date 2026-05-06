@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "build": "tsc", 
+    "build": "tsc",
     "start": "node dist/index.js"
   },
   "keywords": [],
@@ -13,18 +13,18 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@kubernetes/client-node": "^0.21.0",
-    "@prisma/client": "^5.10.2",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
+    "@kubernetes/client-node": "^1.4.0",
+    "@prisma/client": "^6.19.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "prisma": "^5.10.2"
+    "prisma": "^6.19.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/node": "^24.10.2",
-    "nodemon": "^3.1.11",
+    "@types/node": "^22.10.0",
+    "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
