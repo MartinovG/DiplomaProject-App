@@ -12,7 +12,7 @@ Demo application for a Kubernetes Preview Environment system. This is **one of t
 
 ## What This Is
 
-An end-to-end demo of automated Kubernetes preview environments with intelligent lifecycle management. When a developer opens a Pull Request, the system automatically:
+An end-to-end demo of automated Kubernetes preview environments. When a developer opens a Pull Request, the system automatically:
 
 1. Builds Docker images tagged `backend-pr-{N}` / `frontend-pr-{N}`
 2. Pushes them to ECR
@@ -22,12 +22,12 @@ An end-to-end demo of automated Kubernetes preview environments with intelligent
 
 Merges to `main` follow the same build pipeline but tag images with the git SHA and update the production deployment.
 
-The **PreviewControl** dashboard (this app) sits on top and adds:
+The **PreviewControl** dashboard (this app) is a read-only operator view on top:
 
-- **Auto-sleep** — preview envs that have been idle past their configured timeout are automatically scaled to 0
-- **Auto-wake on webhook** — a GitHub webhook scales the env back up when the PR receives a push or comment, before the reviewer opens the link
-- **Cost tracking** — accurate per-namespace runtime cost computed from the audit log, plus estimated savings from auto-sleep
-- **Per-environment settings** — idle timeout, hourly cost rate, and auto-sleep on/off configurable from the UI
+- Lists every preview namespace plus prod, with live status (active vs. sleeping based on replica count)
+- Shows pod readiness, namespace age, and accumulated runtime cost per environment
+- Direct links: **Open preview** → live URL, **View PR on GitHub** → the originating Pull Request
+- A separate hourly CronJob in [DiplomaProject-ArgoCD](https://github.com/MartinovG/DiplomaProject-ArgoCD) garbage-collects `pr-*` namespaces whose PRs have closed
 
 ---
 
@@ -35,13 +35,11 @@ The **PreviewControl** dashboard (this app) sits on top and adds:
 
 ```
 .
-├── backend/                  Node.js / Express + Prisma (port 4000)
+├── backend/                  Node.js / Express (port 4000)
 │   ├── src/
 │   │   ├── index.ts          API server + route registration
 │   │   ├── k8s.ts            Kubernetes client setup
-│   │   ├── autoSleep.ts      Background controller — scales idle envs to 0
-│   │   └── cost.ts           Runtime cost computation from AuditLog
-│   ├── prisma/schema.prisma  AuditLog + Environment models
+│   │   └── cost.ts           Runtime cost calculation
 │   └── Dockerfile
 ├── frontend/                 Next.js (port 3000)
 │   └── src/app/
@@ -75,7 +73,7 @@ ArgoCD ApplicationSet (polls GitHub every 60s)
               └── /      → frontend (port 3000)
 
 PR merged → images tagged sha-{hash} → prod values.yaml updated → ArgoCD syncs prod
-PR closed → ArgoCD prunes pr-{N} namespace
+PR closed → ArgoCD prunes pr-{N} (namespace garbage-collected hourly by cleanup CronJob)
 ```
 
 **Production** runs at `https://gmdiplomaproject.elsys.itgix.eu` with:
@@ -88,54 +86,25 @@ PR closed → ArgoCD prunes pr-{N} namespace
 
 ## Backend API
 
+All endpoints are read-only.
+
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/health` | Liveness/readiness probe |
-| `GET` | `/api/envs` | List preview namespaces with status, settings, and cost |
-| `POST` | `/api/scale` | Manually sleep or wake a deployment |
-| `GET` | `/api/history` | Audit log of sleep/wake actions (last 200 entries) |
-| `GET` | `/api/cost` | Cluster-wide cost summary (total spent, total saved, auto-sleep events) |
-| `POST` | `/api/settings/:namespace` | Update per-env settings (idle timeout, auto-sleep, hourly rate) |
-| `POST` | `/api/webhook/github` | GitHub webhook — wakes the matching `pr-{N}` env |
+| `GET` | `/api/envs` | List all visible namespaces with status, replica counts, age, cost, preview URL, and GitHub PR URL |
+| `GET` | `/api/cost` | Cluster-wide cost summary (total spent, active count, total count) |
 
-**POST `/api/scale` body:**
-```json
-{ "namespace": "pr-5", "deployment": "backend", "action": "wake" }
-```
-`action` must be `"wake"` or `"sleep"`.
-
-**POST `/api/settings/:namespace` body** (any subset):
-```json
-{ "idleTimeoutMin": 30, "autoSleepEnabled": true, "hourlyCostUsd": 0.04 }
-```
-
-**Audit log actions:**
-- `WAKE` / `SLEEP` — manual via dashboard
-- `AUTO_SLEEP` — auto-sleep controller scaled an idle env to 0
-- `AUTO_WAKE` — GitHub webhook woke a sleeping env
-
-## Auto-Sleep Controller
-
-A background loop inside the backend ticks every 60 seconds. For each managed namespace (`pr-*`):
-
-1. Looks up the `Environment` row (idle timeout, auto-sleep enabled, last activity)
-2. Skips if auto-sleep is disabled or if all deployments are already at 0 replicas
-3. If `now - lastActivityAt > idleTimeoutMin`, scales every deployment to 0 and records an `AUTO_SLEEP` audit entry with the reason
-
-`lastActivityAt` is bumped on:
-- Manual wake from the dashboard
-- GitHub webhook (push, comment, reopen)
-
-The controller is gated behind `AUTO_SLEEP_ENABLED=true` so it only runs in the production deployment, not inside individual PR previews.
+System namespaces (`kube-*`, `argocd`, `monitoring`, `loki`, etc.) are filtered out of the list. The dashboard intentionally has no scaling, settings, or webhook endpoints — it cannot stop, start, or otherwise affect any deployment.
 
 ## Cost Tracking
 
-Cost is computed on demand from the audit log. For each namespace:
+For each visible namespace, cost is computed as:
 
-- **Cost so far** = (sum of awake intervals × hourly rate). Awake intervals are paired `WAKE` → `SLEEP`/`AUTO_SLEEP` entries; if currently awake, the open interval extends to `now`.
-- **Savings** = (sum of asleep intervals after `AUTO_SLEEP` × hourly rate). Represents time the env would have been running if auto-sleep hadn't intervened.
+```
+costUsd = (now - namespace.creationTimestamp) × HOURLY_COST_USD
+```
 
-The default hourly rate is `$0.04` (configurable per env via `/api/settings/:namespace`). The cluster runs on a Karpenter NodePool of `t3.medium` instances (mix of spot and on-demand), so this number is a deliberate over-estimate — preview envs share a node and use only a fraction of it.
+The default rate is `$0.04/hr` per environment, configurable via the `HOURLY_COST_USD` env var. The cluster runs on a Karpenter NodePool of `t3.medium` instances (mix of spot and on-demand), so this number is a deliberate over-estimate — preview envs share a node and use only a fraction of it. The cluster summary at `/api/cost` sums these per-namespace values.
 
 ---
 
@@ -145,13 +114,13 @@ The default hourly rate is `$0.04` (configurable per env via `/api/settings/:nam
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | Full Postgres connection string (set automatically in cluster) |
 | `PORT` | No | HTTP listen port (default `4000`) |
-| `AUTO_SLEEP_ENABLED` | No | Set to `true` to run the auto-sleep controller. Should only be `true` in the production deployment. |
+| `HOURLY_COST_USD` | No | Per-environment hourly cost rate used for cost calculations (default `0.04`) |
+| `GITHUB_OWNER` | No | GitHub repo owner used to build PR URLs (default `MartinovG`) |
+| `GITHUB_REPO` | No | GitHub repo name used to build PR URLs (default `DiplomaProject-App`) |
+| `PREVIEW_HOST_SUFFIX` | No | DNS suffix used to build preview URLs (default `elsys.itgix.eu`) |
 
-In production and preview environments these are injected by the Helm chart from Kubernetes Secrets (managed by External Secrets Operator → AWS Secrets Manager).
-
-For local development, copy `.env` (not committed) and set `DATABASE_URL`.
+The backend has no database connection — it's a thin layer over the Kubernetes API.
 
 ### Frontend
 
@@ -164,23 +133,13 @@ The frontend calls `/api/*` as relative paths. In Kubernetes an ALB Ingress rule
 ### Prerequisites
 
 - Node.js 22
-- Docker (for running Postgres locally)
-- A running Kubernetes context if you want the `/api/envs` endpoint to return real data
+- A running Kubernetes context if you want `/api/envs` to return real data (the backend reads from `~/.kube/config` automatically)
 
 ### Backend
 
 ```bash
 cd backend
 npm install
-
-# Start a local Postgres
-docker run -d --name pg -e POSTGRES_USER=admin -e POSTGRES_PASSWORD=password123 \
-  -e POSTGRES_DB=preview_db -p 5432:5432 postgres:17-alpine
-
-# Apply the schema
-npx prisma db push
-
-# Run in dev mode
 npm run dev          # nodemon + ts-node on port 4000
 ```
 
@@ -192,7 +151,7 @@ npm install
 npm run dev          # Next.js dev server on port 3000
 ```
 
-The frontend proxies `/api` calls. To point it at the local backend, add a `rewrites` rule to `next.config.ts`:
+The frontend calls `/api/*` as relative paths. To proxy them to the local backend in dev, add a `rewrites` rule to `next.config.ts`:
 
 ```ts
 async rewrites() {
@@ -237,17 +196,6 @@ ECR lifecycle policy retains the 10 most recent images per repository.
 
 Both services expose `GET /api/health` returning `{ "status": "ok" }`.
 Kubernetes liveness and readiness probes poll this endpoint every 10 seconds; 3 consecutive failures trigger a pod restart.
-
----
-
-## Database
-
-- **Production**: AWS RDS PostgreSQL 17.6, `db.t4g.micro`, 20 GB gp3. Managed as a Kubernetes CRD via ACK RDS Controller. Schema applied with `prisma db push` at container startup.
-- **Preview**: Ephemeral Postgres 17 Alpine pod running in the same namespace as the app. Deleted automatically when the PR closes.
-
-Schema:
-- `AuditLog` — every sleep/wake action with namespace, action type (`WAKE` / `SLEEP` / `AUTO_SLEEP` / `AUTO_WAKE`), reason, timestamp.
-- `Environment` — per-namespace settings: `lastActivityAt`, `idleTimeoutMin`, `autoSleepEnabled`, `hourlyCostUsd`. Lazily upserted the first time a namespace is observed.
 
 ---
 
