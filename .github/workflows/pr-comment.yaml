@@ -21,10 +21,10 @@ jobs:
             
             const body = `
             ### Preview Environment
-            
+
             - **URL:** ${previewUrl}
             - **Namespace:** \`${namespace}\`
-            - **Images:** \`backend-pr-${prNumber}\` / \`frontend-pr-${prNumber}\`
+            - **Images:** \`backend-pr-${prNumber}-<short-sha>\` / \`frontend-pr-${prNumber}-<short-sha>\` (re-tagged on every push)
             `;
 
             github.rest.issues.createComment({

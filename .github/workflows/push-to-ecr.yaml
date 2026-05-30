@@ -42,7 +42,8 @@ jobs:
         id: meta
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "TAG=pr-${{ github.event.number }}" >> $GITHUB_ENV
+            SHORT_SHA=$(echo "${{ github.event.pull_request.head.sha }}" | cut -c1-7)
+            echo "TAG=pr-${{ github.event.number }}-${SHORT_SHA}" >> $GITHUB_ENV
           else
             echo "TAG=sha-${{ github.sha }}" >> $GITHUB_ENV
           fi

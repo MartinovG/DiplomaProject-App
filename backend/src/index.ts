@@ -5,7 +5,7 @@ import { costSinceCreation, DEFAULT_HOURLY_COST_USD } from './cost';
 
 const app = express();
 
-app.use(cors());
+app.use(cors({ origin: process.env.CORS_ORIGIN }));
 app.use(express.json());
 
 const SYSTEM_NAMESPACES = new Set([
