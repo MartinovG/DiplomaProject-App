@@ -65,26 +65,26 @@ export default function Dashboard() {
       : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
 
   return (
-    <main className="min-h-screen bg-[#0a0c10] text-slate-300 font-sans selection:bg-fuchsia-500/30">
-      <div className="sticky top-0 z-50 bg-gradient-to-r from-fuchsia-600 via-pink-500 to-rose-500 text-white text-sm font-bold tracking-wide py-2.5 px-4 flex items-center justify-center gap-2 shadow-lg shadow-fuchsia-500/30">
+    <main className="min-h-screen bg-[#0a0c10] text-slate-300 font-sans selection:bg-emerald-500/30">
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-emerald-600 via-green-500 to-lime-500 text-white text-sm font-bold tracking-wide py-2.5 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/30">
         <Sparkles className="w-4 h-4" />
         PREVIEW BUILD — test3 branch
         <Sparkles className="w-4 h-4" />
       </div>
 
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-fuchsia-900/15 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-900/15 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-900/15 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-green-900/15 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative max-w-7xl mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
         <header className="lg:col-span-12 flex justify-between items-center mb-2 border-b border-white/5 pb-6">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-fuchsia-500 to-pink-600 rounded-lg shadow-lg shadow-fuchsia-500/30">
+              <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg shadow-lg shadow-emerald-500/30">
                 <Rocket className="w-6 h-6 text-white" />
               </div>
-              Preview<span className="text-fuchsia-400">Control</span>
+              Preview<span className="text-emerald-400">Control</span>
             </h1>
             <p className="text-slate-500 text-sm mt-2 ml-1">
               Read-only Kubernetes preview environment dashboard
