@@ -48,13 +48,36 @@ jobs:
             echo "TAG=sha-${{ github.sha }}" >> $GITHUB_ENV
           fi
 
+      - name: Check Existing Images
+        id: check
+        run: |
+          if aws ecr describe-images \
+              --repository-name "$ECR_REPOSITORY_BACKEND" \
+              --image-ids imageTag="backend-${{ env.TAG }}" \
+              --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "backend_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+          if aws ecr describe-images \
+              --repository-name "$ECR_REPOSITORY_FRONTEND" \
+              --image-ids imageTag="frontend-${{ env.TAG }}" \
+              --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "frontend_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "frontend_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build Backend
+        if: steps.check.outputs.backend_exists == 'false'
         run: |
           cd backend
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:backend-${{ env.TAG }} .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:backend-${{ env.TAG }}
 
       - name: Build Frontend
+        if: steps.check.outputs.frontend_exists == 'false'
         run: |
           cd frontend
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:frontend-${{ env.TAG }} .
