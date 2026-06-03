@@ -18,13 +18,16 @@ jobs:
             const prNumber = context.issue.number;
             const previewUrl = `https://pr-${prNumber}.elsys.itgix.eu`;
             const namespace = `pr-${prNumber}`;
-            
+            const shortSha = context.payload.pull_request.head.sha.slice(0, 8);
+            const backendTag = `backend-pr-${prNumber}-${shortSha}`;
+            const frontendTag = `frontend-pr-${prNumber}-${shortSha}`;
+
             const body = `
             ### Preview Environment
 
             - **URL:** ${previewUrl}
             - **Namespace:** \`${namespace}\`
-            - **Images:** \`backend-pr-${prNumber}-<short-sha>\` / \`frontend-pr-${prNumber}-<short-sha>\` (re-tagged on every push)
+            - **Images:** \`${backendTag}\` / \`${frontendTag}\` (re-tagged on every push)
             `;
 
             github.rest.issues.createComment({
