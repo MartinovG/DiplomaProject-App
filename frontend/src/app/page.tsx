@@ -2,8 +2,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
-  Clock, Server, RefreshCw, Layers, Box, AlertCircle, X,
-  DollarSign, ExternalLink, GitPullRequest, Activity,
+  Clock, Server, RefreshCw, Flame, Box, AlertCircle, X,
+  DollarSign, ExternalLink, GitPullRequest, Activity, Sparkles,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -65,20 +65,26 @@ export default function Dashboard() {
       : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
 
   return (
-    <main className="min-h-screen bg-[#0a0c10] text-slate-300 font-sans selection:bg-cyan-500/30">
+    <main className="min-h-screen bg-[#0a0c10] text-slate-300 font-sans selection:bg-amber-500/30">
+      <div className="sticky top-0 z-50 bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 text-white text-sm font-bold tracking-wide py-2.5 px-4 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30">
+        <Sparkles className="w-4 h-4" />
+        PREVIEW BUILD — test1 branch
+        <Sparkles className="w-4 h-4" />
+      </div>
+
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-900/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-900/15 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-orange-900/15 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative max-w-7xl mx-auto p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
         <header className="lg:col-span-12 flex justify-between items-center mb-2 border-b border-white/5 pb-6">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg shadow-cyan-500/20">
-                <Layers className="w-6 h-6 text-white" />
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-lg shadow-amber-500/30">
+                <Flame className="w-6 h-6 text-white" />
               </div>
-              Preview<span className="text-slate-500">Control</span>
+              Preview<span className="text-amber-400">Control</span>
             </h1>
             <p className="text-slate-500 text-sm mt-2 ml-1">
               Read-only Kubernetes preview environment dashboard
