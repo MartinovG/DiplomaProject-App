@@ -2,7 +2,7 @@ name: PR Message
 
 on:
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, synchronize]
 
 permissions:
   pull-requests: write
@@ -11,7 +11,7 @@ jobs:
   welcome-msg:
     runs-on: ubuntu-latest
     steps:
-      - name: Post Preview Info
+      - name: Post or Update Preview Info
         uses: actions/github-script@v6
         with:
           script: |
@@ -30,9 +30,28 @@ jobs:
             - **Images:** \`${backendTag}\` / \`${frontendTag}\` (re-tagged on every push)
             `;
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: prNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: body
             });
+
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body && c.body.includes('### Preview Environment')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: prNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body,
+              });
+            }
