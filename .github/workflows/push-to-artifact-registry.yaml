@@ -6,10 +6,10 @@ on:
   pull_request:
 
 env:
-  GCP_REGION: europe-west3
+  GCP_REGION: europe-west1
   REGISTRY: europe-west1-docker.pkg.dev/playground-s-11-a2f0baaf/gm-diploma-project
   ARGOCD_REPO: github.com/MartinovG/DiplomaProject-ArgoCD.git
-  ARGOCD_FILE_PATH: europe-west3/prod/helm/values.yaml
+  ARGOCD_FILE_PATH: europe-west1/prod/helm/values.yaml
 
 permissions:
   id-token: write 
@@ -47,19 +47,19 @@ jobs:
       - name: Check Existing Images
         id: check
         run: |
-          if aws ecr describe-images \
-              --repository-name "$REGISTRY" \
-              --image-ids imageTag="backend-${{ env.TAG }}" \
-              --region "$AWS_REGION" >/dev/null 2>&1; then
+          if gcloud artifacts docker images describe \
+              --repository="$REGISTRY" \
+              --image="backend-${{ env.TAG }}" \
+              --region="$GCP_REGION" >/dev/null 2>&1; then
             echo "backend_exists=true" >> $GITHUB_OUTPUT
           else
             echo "backend_exists=false" >> $GITHUB_OUTPUT
           fi
 
-          if aws ecr describe-images \
-              --repository-name "$REGISTRY" \
-              --image-ids imageTag="frontend-${{ env.TAG }}" \
-              --region "$AWS_REGION" >/dev/null 2>&1; then
+          if gcloud artifacts docker images describe \
+              --repository="$REGISTRY" \
+              --image="frontend-${{ env.TAG }}" \
+              --region="$GCP_REGION" >/dev/null 2>&1; then
             echo "frontend_exists=true" >> $GITHUB_OUTPUT
           else
             echo "frontend_exists=false" >> $GITHUB_OUTPUT
