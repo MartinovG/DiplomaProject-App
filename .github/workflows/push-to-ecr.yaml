@@ -6,13 +6,10 @@ on:
   pull_request:
 
 env:
-  AWS_REGION: eu-central-1
-  ECR_REGISTRY: 787587782604.dkr.ecr.eu-central-1.amazonaws.com
-  ECR_REPOSITORY_BACKEND: gm-diploma-project-ecr-api
-  ECR_REPOSITORY_FRONTEND: gm-diploma-project-ecr-frontend
-  ROLE_TO_ASSUME: arn:aws:iam::787587782604:role/GitHubActions
+  GCP_REGION: europe-west3
+  REGISTRY: europe-west1-docker.pkg.dev/playground-s-11-a2f0baaf/gm-diploma-project
   ARGOCD_REPO: github.com/MartinovG/DiplomaProject-ArgoCD.git
-  ARGOCD_FILE_PATH: eu-central-1/prod/helm/values.yaml
+  ARGOCD_FILE_PATH: europe-west3/prod/helm/values.yaml
 
 permissions:
   id-token: write 
@@ -28,15 +25,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v3
+      - name: Auth to GCP
+        uses: google-github-actions/auth@v2
         with:
-          role-to-assume: ${{ env.ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+          workload_identity_provider: projects/845306284109/locations/global/workloadIdentityPools/github-actions-pool-v2/providers/github-actions-provider-v2
+          service_account: github-actions-ci@playground-s-11-a2f0baaf.iam.gserviceaccount.com
+      
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
 
       - name: Calculate Image Tag
         id: meta
@@ -52,7 +48,7 @@ jobs:
         id: check
         run: |
           if aws ecr describe-images \
-              --repository-name "$ECR_REPOSITORY_BACKEND" \
+              --repository-name "$REGISTRY" \
               --image-ids imageTag="backend-${{ env.TAG }}" \
               --region "$AWS_REGION" >/dev/null 2>&1; then
             echo "backend_exists=true" >> $GITHUB_OUTPUT
@@ -61,7 +57,7 @@ jobs:
           fi
 
           if aws ecr describe-images \
-              --repository-name "$ECR_REPOSITORY_FRONTEND" \
+              --repository-name "$REGISTRY" \
               --image-ids imageTag="frontend-${{ env.TAG }}" \
               --region "$AWS_REGION" >/dev/null 2>&1; then
             echo "frontend_exists=true" >> $GITHUB_OUTPUT
@@ -73,15 +69,15 @@ jobs:
         if: steps.check.outputs.backend_exists == 'false'
         run: |
           cd backend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:backend-${{ env.TAG }} .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:backend-${{ env.TAG }}
+          docker build -t $REGISTRY/backend:backend-${{ env.TAG }} .
+          docker push $REGISTRY/backend:backend-${{ env.TAG }}
 
       - name: Build Frontend
         if: steps.check.outputs.frontend_exists == 'false'
         run: |
           cd frontend
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:frontend-${{ env.TAG }} .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:frontend-${{ env.TAG }}
+          docker build -t $REGISTRY/frontend:frontend-${{ env.TAG }} .
+          docker push $REGISTRY/frontend:frontend-${{ env.TAG }}
 
       - name: Update ArgoCD Repo
         if: github.ref == 'refs/heads/main'
