@@ -7,7 +7,7 @@ on:
 
 env:
   GCP_REGION: europe-west1
-  REGISTRY: europe-west1-docker.pkg.dev/playground-s-11-a2f0baaf/gm-diploma-project
+  REGISTRY: europe-west1-docker.pkg.dev/playground-s-11-6cf436aa/gm-diploma-project
   ARGOCD_REPO: github.com/MartinovG/DiplomaProject-ArgoCD.git
   ARGOCD_FILE_PATH: europe-west1/prod/helm/values.yaml
 
@@ -28,8 +28,7 @@ jobs:
       - name: Auth to GCP
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: projects/845306284109/locations/global/workloadIdentityPools/github-actions-pool-v2/providers/github-actions-provider-v2
-          service_account: github-actions-ci@playground-s-11-a2f0baaf.iam.gserviceaccount.com
+          workload_identity_provider: rojects/398664689663/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
       
       - name: Configure Docker for GCP
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
