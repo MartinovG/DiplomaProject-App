@@ -28,7 +28,7 @@ jobs:
       - name: Auth to GCP
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: projects/272354511873/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
+          workload_identity_provider: projects/272354511873/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
           service_account: github-actions-ci@playground-s-11-fc8b3fbb.iam.gserviceaccount.com
       
       - name: Configure Docker for GCP
