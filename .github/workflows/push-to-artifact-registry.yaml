@@ -80,7 +80,7 @@ jobs:
           docker push $REGISTRY/frontend:frontend-${{ env.TAG }}
 
       - name: Update ArgoCD Repo
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/gcp'
         env:
           GH_TOKEN: ${{ secrets.ARGOCD_REPO_TOKEN }}
         run: |
