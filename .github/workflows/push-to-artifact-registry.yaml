@@ -90,8 +90,8 @@ jobs:
           git clone -b gcp https://${GITHUB_ACTOR}:${GH_TOKEN}@${ARGOCD_REPO} argocd-repo
           cd argocd-repo
 
-          sed -i "s|tag: backend.*|\1tag: backend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
-          sed -i "s|tag: frontend.*|\1tag: frontend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
+          sed -i "s|^\(\s*\)tag: backend.*|\1tag: backend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
+          sed -i "s|^\(\s*\)tag: frontend.*|\1tag: frontend-${{ env.TAG }}|" ${{ env.ARGOCD_FILE_PATH }}
 
           git diff
 
